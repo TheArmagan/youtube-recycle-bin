@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![YouTube Recycle Bin Explorer](https://img.shields.io/badge/YouTube-Recycle%20Bin%20Explorer-ff0000?style=for-the-badge&logo=youtube&logoColor=white)
+[![YouTube Recycle Bin Explorer](https://img.shields.io/badge/YouTube-Recycle%20Bin%20Explorer-ff0000?style=for-the-badge&logo=youtube&logoColor=white)](https://thearmagan.github.io/youtube-recycle-bin)
 ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
