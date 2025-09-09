@@ -126,7 +126,7 @@ class YouTubeRecycleBinExplorer {
         { phrase: '"My Stupeflix Video"', variable: '', example: '"My Stupeflix Video"' },
         { phrase: '"My Stupeflix Video', variable: 'XXXX"', example: '"My Stupeflix Video 1234"', range: '0000-1050' },
         { phrase: '"My Videolicious Video"', variable: '', example: '"My Videolicious Video"' },
-        { phrase: '"Month DD, YYYY"', variable: '', example: '"May 02, 2020"' },
+        { phrase: '"Month DD, YYYY"', variable: 'DATE', example: '"May 02, 2020"', needsDateFormat: true, isMap2: true },
         { phrase: '"Video YMD"', variable: '', example: '"Video 20201102"' },
         { phrase: '"Axon Body', variable: 'Video"', example: '"Axon Body 2 Video"' }
       ],
@@ -151,10 +151,10 @@ class YouTubeRecycleBinExplorer {
         { phrase: '"Multimedia Message"', variable: '', example: '"Multimedia Message"' },
         { phrase: '"Video from my phone"', variable: '', example: '"Video from my phone"' },
         { phrase: '"Video uploaded from my mobile phone"', variable: '', example: '"Video uploaded from my mobile phone"' },
-        { phrase: '"For', variable: 'Month DD, YYYY"', example: '"For December 02, 2007"' }
+        { phrase: '"For', variable: 'DATE', example: '"For December 02, 2007"', needsDateFormat: true }
       ],
       camera: [
-        { phrase: '"Recorded on', variable: 'Month DD, YYYY using a Flip Video Camcorder"', example: '"Recorded on December 02, 2007 using a Flip Video Camcorder"' },
+        { phrase: '"Recorded on', variable: 'DATE', example: '"Recorded on December 02, 2007 using a Flip Video Camcorder"', needsDateFormat: true, suffix: ' using a Flip Video Camcorder"' },
         { phrase: 'Video0', variable: 'XX', example: 'Video001', range: '00-10' },
         { phrase: 'Vid0', variable: 'XX', example: 'Vid001', range: '00-10' },
         { phrase: 'MOV000', variable: 'XX', example: 'MOV00001', range: '00-10' }
@@ -443,6 +443,12 @@ class YouTubeRecycleBinExplorer {
   generateQuery(keyphrase, searchParams, surpriseMode = false) {
     let query = keyphrase.phrase;
 
+    // Handle special date format patterns first for Map 3 and Map 2
+    if (keyphrase.needsDateFormat) {
+      query = this.handleSpecialDateFormats(keyphrase, surpriseMode);
+      return this.finalizeQuery(query, searchParams);
+    }
+
     // Handle YMD (Year Month Day) patterns first
     query = this.handleYMDPatterns(query, surpriseMode);
 
@@ -453,7 +459,7 @@ class YouTubeRecycleBinExplorer {
     query = this.handleTimePatterns(query);
 
     // Handle variables and ranges
-    if (keyphrase.variable) {
+    if (keyphrase.variable && keyphrase.variable !== 'DATE') {
       if (keyphrase.range) {
         // Generate random number in range
         const [start, end] = keyphrase.range.split('-');
@@ -480,11 +486,49 @@ class YouTubeRecycleBinExplorer {
       }
     }
 
-    // Handle date placeholders for Map 3
+    // Handle date placeholders for Map 3 (legacy method)
     if (this.currentMap === '3') {
       query = this.handleMap3Dates(query, surpriseMode);
     }
 
+    return this.finalizeQuery(query, searchParams);
+  }
+
+  handleSpecialDateFormats(keyphrase, surpriseMode = false) {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+
+    let year;
+    if (keyphrase.isMap2) {
+      // Map 2: Old videos (2008-2022)
+      year = surpriseMode ?
+        Math.floor(Math.random() * 15) + 2008 : // 2008-2022
+        Math.floor(Math.random() * 15) + 2008;
+    } else {
+      // Map 3: Retro videos (2006-2008)  
+      year = surpriseMode ?
+        Math.floor(Math.random() * 3) + 2006 : // 2006-2008
+        Math.floor(Math.random() * 3) + 2006;
+    }
+
+    const month = months[Math.floor(Math.random() * 12)];
+    const day = Math.floor(Math.random() * 28) + 1;
+    const formattedDay = day.toString().padStart(2, '0');
+
+    const dateString = `${month} ${formattedDay}, ${year}`;
+
+    if (keyphrase.phrase === '"For') {
+      return `"For ${dateString}"`;
+    } else if (keyphrase.phrase === '"Recorded on') {
+      return `"Recorded on ${dateString}${keyphrase.suffix || ''}"`;
+    } else if (keyphrase.phrase === '"Month DD, YYYY"') {
+      return `"${dateString}"`;
+    }
+
+    return keyphrase.phrase;
+  }
+
+  finalizeQuery(query, searchParams) {
     // Add quotes if specified
     if (searchParams.useQuotes && !query.includes('"') && Math.random() > 0.3) {
       query = `"${query}"`;
@@ -654,8 +698,18 @@ class YouTubeRecycleBinExplorer {
     const month = months[Math.floor(Math.random() * 12)];
     const day = Math.floor(Math.random() * 28) + 1; // Safe day range
 
-    query = query.replace('Month DD, YYYY', `${month} ${day.toString().padStart(2, '0')}, ${year}`);
-    query = query.replace('YYYY', year.toString());
+    // Handle "Month DD, YYYY" pattern properly
+    query = query.replace(/Month DD, YYYY/g, `${month} ${day.toString().padStart(2, '0')}, ${year}`);
+
+    // Handle specific patterns that include dates
+    query = query.replace(/\"For Month DD, YYYY\"/g, `"For ${month} ${day.toString().padStart(2, '0')}, ${year}"`);
+    query = query.replace(/\"Recorded on Month DD, YYYY using a Flip Video Camcorder\"/g,
+      `"Recorded on ${month} ${day.toString().padStart(2, '0')}, ${year} using a Flip Video Camcorder"`);
+
+    // Handle standalone YYYY that hasn't been replaced yet
+    if (query.includes('YYYY') && !query.includes(year.toString())) {
+      query = query.replace(/YYYY/g, year.toString());
+    }
 
     return query;
   }
